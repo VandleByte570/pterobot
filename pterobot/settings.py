@@ -1,2 +1,5 @@
+import os
+
+
 class PterobotSettings():
-    token = ''
+    token = os.getenv('DISCORD_TOKEN', '')
