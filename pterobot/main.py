@@ -31,7 +31,9 @@ AUDIT_LOG_PATH = os.environ.get("PTEROBOT_AUDIT_LOG", "pterobot/audit.log")
 # ----- utility helpers -----
 def audit_entry(entry: dict):
     try:
-        os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
+        dirpath = os.path.dirname(AUDIT_LOG_PATH)
+        if dirpath:
+            os.makedirs(dirpath, exist_ok=True)
         with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, default=str) + "\n")
     except Exception:
@@ -121,7 +123,12 @@ async def ptero_get(base_url: str, api_key: str, path: str) -> dict:
             text = await resp.text()
             if resp.status >= 400:
                 raise RuntimeError(f"Pterodactyl GET {url} returned {resp.status}: {text}")
-            return json.loads(text)
+            if not text:
+                return {}
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return {"__raw_text": text}
 
 async def ptero_post(base_url: str, api_key: str, path: str, json_payload: dict) -> dict:
     url = f"{base_url}{path}"
@@ -132,7 +139,10 @@ async def ptero_post(base_url: str, api_key: str, path: str, json_payload: dict)
                 raise RuntimeError(f"Pterodactyl POST {url} returned {resp.status}: {text}")
             # Many power endpoints return 204: no content
             if text:
-                return json.loads(text)
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    return {"__raw_text": text}
             return {}
 
 # ----- UI components for interactive controls -----
