@@ -8,5 +8,5 @@ class PteroBot(discord.Client):
 
 
 client = PteroBot()
-settings = settings.PterobotSettings()
-client.run(settings.token)
+settings_config = settings.PterobotSettings()
+client.run(settings_config.token)
