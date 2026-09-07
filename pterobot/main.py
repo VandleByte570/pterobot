@@ -76,11 +76,71 @@ class PteroCommands(app_commands.Group):
 
 ptero_group = PteroCommands(name="ptero", description="Pterodactyl panel/server commands")
 
-@ptero_group.command(name="panel", description="Show configured Pterodactyl panel URL")
+@ptero_group.command(name="panel", description="Show a rich Pterodactyl panel embed")
 async def panel(interaction: discord.Interaction):
+    """Show a rich embed linking to the Pterodactyl panel and summary of servers."""
     await interaction.response.defer()
-    url = cfg.ptero_base_url or "Not configured"
-    await interaction.followup.send(f"Pterodactyl panel: {url}")
+    url = cfg.ptero_base_url or None
+    if not url:
+        embed = discord.Embed(
+            title="Pterodactyl Panel",
+            description="Panel URL is not configured. Please set PTERODACTYL_BASE_URL in the bot configuration.",
+            color=0xE74C3C,
+        )
+        await interaction.followup.send(embed=embed)
+        return
+
+    # Build the base embed
+    embed = discord.Embed(
+        title="Pterodactyl Panel",
+        description="Manage your game servers from the Pterodactyl web panel. Click the button below to open the panel.",
+        color=0x7289DA,
+        url=url,
+    )
+    embed.set_thumbnail(url="https://raw.githubusercontent.com/iamkubi/pterobot/main/logo.png") if True else None
+    embed.add_field(name="Panel URL", value=f"[Open Panel]({url})", inline=False)
+
+    # Try to fetch servers to show a summary
+    server_lines = []
+    try:
+        if cfg.ptero_api_key:
+            srv = await ptero_get(cfg.ptero_base_url, cfg.ptero_api_key, "/api/client/servers")
+            servers = srv.get("data", [])
+            for s in servers[:8]:  # show up to 8 servers
+                d = s.get("attributes", {})
+                name = d.get("name", "Unknown")
+                identifier = d.get("identifier") or d.get("uuid") or "unknown"
+                status = d.get("status") or d.get("current_state", "unknown")
+                # Attempt to link directly to server page if identifier available
+                server_url = f"{url}/server/{identifier}" if identifier and identifier != "unknown" else url
+                server_lines.append(f"**{name}** — {status} — [Open]({server_url})")
+        else:
+            server_lines.append("Pterodactyl API key not configured; set PTERODACTYL_API_KEY to show servers.")
+    except Exception as e:
+        log.exception("Failed to fetch servers for panel embed")
+        server_lines.append(f"Failed to fetch servers: {e}")
+
+    if server_lines:
+        embed.add_field(name="Servers", value="\n".join(server_lines), inline=False)
+
+    embed.set_footer(text="PteroBot — Control your servers from the official panel")
+
+    # Action button: open panel
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(label="Open Panel", style=discord.ButtonStyle.url, url=url))
+    # If we have at least one server, add a button to open the first server page
+    try:
+        if cfg.ptero_api_key and server_lines and "Failed to fetch" not in server_lines[0]:
+            # pick first server identifier from servers list if available
+            if 'servers' in locals() and servers:
+                first = servers[0]
+                fid = first.get("attributes", {}).get("identifier") or first.get("attributes", {}).get("uuid")
+                if fid:
+                    view.add_item(discord.ui.Button(label="Open First Server", style=discord.ButtonStyle.url, url=f"{url}/server/{fid}"))
+    except Exception:
+        pass
+
+    await interaction.followup.send(embed=embed, view=view)
 
 @ptero_group.command(name="servers", description="List your Pterodactyl servers (requires PTERODACTYL_API_KEY)")
 async def servers(interaction: discord.Interaction):
