@@ -1,0 +1,10 @@
+# This is a Python Discord bot, not a static site
+# Disable Netlify builds and deployments
+[build]
+  command = "echo 'This is a Python Discord bot. Deploy via Docker or pip.'"
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
