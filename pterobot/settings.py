@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List
 import os
 
@@ -10,8 +10,8 @@ class PterobotSettings:
     ptero_base_url: str = os.environ.get("PTERODACTYL_BASE_URL", "").rstrip("/") if os.environ.get("PTERODACTYL_BASE_URL") else ""
     ptero_api_key: str = os.environ.get("PTERODACTYL_API_KEY", "")
     guild_for_dev: Optional[str] = os.environ.get("DEV_GUILD_ID") or None
-    control_role_ids: List[int] = []
-    admin_user_ids: List[int] = []
+    control_role_ids: List[int] = field(default_factory=list)
+    admin_user_ids: List[int] = field(default_factory=list)
     power_cooldown_seconds: int = 30
 
     def __post_init__(self):
