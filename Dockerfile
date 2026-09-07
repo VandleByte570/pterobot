@@ -6,4 +6,4 @@ COPY . .
 
 RUN python -m pip install --upgrade -r requirements.txt
 
-CMD [ "python", "pterobot/main.py" ]
+CMD [ "python", "-m", "pterobot.main" ]
