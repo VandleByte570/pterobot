@@ -1,6 +1,6 @@
 import discord
 
-import settings
+from . import settings
 
 class PteroBot(discord.Client):
     async def on_ready(self):
